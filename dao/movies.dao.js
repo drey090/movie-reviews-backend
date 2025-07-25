@@ -18,22 +18,41 @@ export default class MoviesDAO {
 
   static async getMovies({ filters = {}, page = 0, moviesPerPage = 20 } = {}) {
     let query = {};
+
+    // LOGGING: Show what is being received
+    console.log("DAO received filters:", filters);
+
     if (filters.title) {
-      query = { $text: { $search: filters.title } };
+      // Case-insensitive, partial match search
+      query = { 
+        title: { 
+          $regex: filters.title, 
+          $options: 'i'
+        } 
+      };
     } else if (filters.rated) {
       query = { rated: filters.rated };
     } else if (filters.genres) {
       query = { genres: { $in: [filters.genres] } };
     }
 
-    const cursor = moviesColl.find(query)
-      .skip(page * moviesPerPage)
-      .limit(moviesPerPage);
+    // LOGGING: Show the constructed Mongo query
+    console.log("MongoDB query:", query);
 
-    const moviesList    = await cursor.toArray();
-    const totalNumMovies = await moviesColl.countDocuments(query);
+    try {
+      const cursor = moviesColl.find(query)
+        .sort({ title: 1 })
+        .skip(page * moviesPerPage)
+        .limit(moviesPerPage);
 
-    return { moviesList, totalNumMovies };
+      const moviesList = await cursor.toArray();
+      const totalNumMovies = await moviesColl.countDocuments(query);
+
+      return { moviesList, totalNumMovies };
+    } catch (e) {
+      console.error(`Unable to issue find command, ${e}`);
+      return { moviesList: [], totalNumMovies: 0 };
+    }
   }
 
   static async getMovieByID(id) {
@@ -68,9 +87,6 @@ export default class MoviesDAO {
     }
   }
 
-  // ←–– Make sure these three methods exist exactly as shown
-
-  /** insert a new comment document */
   static async addReview(movieId, name, text, date) {
     try {
       const reviewDoc = {
@@ -86,7 +102,6 @@ export default class MoviesDAO {
     }
   }
 
-  /** update an existing comment by its _id */
   static async updateReview(reviewId, name, text, date) {
     try {
       const updateDoc = {
@@ -102,7 +117,6 @@ export default class MoviesDAO {
     }
   }
 
-  /** delete a comment by its _id */
   static async deleteReview(reviewId) {
     try {
       return await commentsColl.deleteOne({ _id: new ObjectId(reviewId) });

@@ -16,6 +16,9 @@ export default class MoviesController {
       if (req.query.rated)   filters.rated   = req.query.rated;
       if (req.query.genres)  filters.genres  = req.query.genres;
 
+      // LOGGING: Show what is being received in the API endpoint
+      console.log("Controller received title query:", req.query.title);
+
       const { moviesList, totalNumMovies } = await MoviesDAO.getMovies({
         filters,
         page,
