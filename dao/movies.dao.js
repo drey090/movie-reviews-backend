@@ -17,43 +17,56 @@ export default class MoviesDAO {
   }
 
   static async getMovies({ filters = {}, page = 0, moviesPerPage = 20 } = {}) {
-    let query = {};
+  let query = {};
+  let conditions = []; // Array to hold all filter conditions
 
-    // LOGGING: Show what is being received
-    console.log("DAO received filters:", filters);
+  // LOGGING: Show what is being received
+  console.log("DAO received filters:", filters);
 
-    if (filters.title) {
-      // Case-insensitive, partial match search
-      query = { 
-        title: { 
-          $regex: filters.title, 
-          $options: 'i'
-        } 
-      };
-    } else if (filters.rated) {
-      query = { rated: filters.rated };
-    } else if (filters.genres) {
-      query = { genres: { $in: [filters.genres] } };
-    }
-
-    // LOGGING: Show the constructed Mongo query
-    console.log("MongoDB query:", query);
-
-    try {
-      const cursor = moviesColl.find(query)
-        .sort({ title: 1 })
-        .skip(page * moviesPerPage)
-        .limit(moviesPerPage);
-
-      const moviesList = await cursor.toArray();
-      const totalNumMovies = await moviesColl.countDocuments(query);
-
-      return { moviesList, totalNumMovies };
-    } catch (e) {
-      console.error(`Unable to issue find command, ${e}`);
-      return { moviesList: [], totalNumMovies: 0 };
-    }
+  // Build individual conditions
+  if (filters.title) {
+    conditions.push({
+      title: {
+        $regex: filters.title,
+        $options: 'i'
+      }
+    });
   }
+
+  if (filters.rated) {
+    conditions.push({ rated: filters.rated });
+  }
+
+  if (filters.genres) {
+    conditions.push({ genres: { $in: [filters.genres] } });
+  }
+
+  // Combine conditions with $and if multiple filters exist
+  if (conditions.length > 1) {
+    query = { $and: conditions };
+  } else if (conditions.length === 1) {
+    query = conditions[0];
+  }
+  // If no conditions, query remains {} (show all)
+
+  // LOGGING: Show the constructed Mongo query
+  console.log("MongoDB query:", query);
+
+  try {
+    const cursor = moviesColl.find(query)
+      .sort({ title: 1 })
+      .skip(page * moviesPerPage)
+      .limit(moviesPerPage);
+
+    const moviesList = await cursor.toArray();
+    const totalNumMovies = await moviesColl.countDocuments(query);
+
+    return { moviesList, totalNumMovies };
+  } catch (e) {
+    console.error(`Unable to issue find command, ${e}`);
+    return { moviesList: [], totalNumMovies: 0 };
+  }
+}
 
   static async getMovieByID(id) {
     try {

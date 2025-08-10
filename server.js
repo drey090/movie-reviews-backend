@@ -13,6 +13,7 @@ app.use(cors({
   origin: [
     'http://localhost:3000',                       // React dev (CRA)
     'http://localhost:5173',                       // Vite dev
+    'http://localhost:5174',  
     'https://movie-reviews-frontend-kappa.vercel.app', // Your production URL
     /\.vercel\.app$/                               // Any Vercel preview URL
   ],
